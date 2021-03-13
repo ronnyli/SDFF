@@ -1,9 +1,7 @@
 (ns sdff.ch2
   (:refer-clojure :exclude [iterate identity]))
 
-(defn compose [f g]
-  (fn [& args]
-    (f (apply g args))))
+(declare compose)
 
 (defn identity [x] x)
 
@@ -13,48 +11,63 @@
       identity
       (compose f ((iterate (dec n)) f)))))
 
-(defn parallel-combine [h f g]
-  (letfn [(the-combination [& args]
-            (h (apply f args) (apply g args)))]
-    the-combination))
-
 (defn get-arity [f]
-  (letfn [(fn-arity [f] (-> f .getParameterTypes alength))]
-    (or (-> f meta :arity)
-        (->> f class .getDeclaredMethods (map fn-arity) sort first))))
+  (letfn [(fn-arity [f] (-> f .getParameterTypes alength))
+          (vararg? [f]
+            (let [c (class f)]
+              (and
+               (pos? (alength (.getDeclaredMethods c)))
+               (#(not (Double/isNaN %))
+                (try (.getRequiredArity f)
+                     (catch java.lang.IllegalArgumentException e ##NaN))))))]
+    (if-let [arity (:arity (meta f))]
+      arity
+      (if (vararg? f)
+        ##NaN
+        (->> f class .getDeclaredMethods (map fn-arity) sort first)))))
 
 (defn restrict-arity [f arity]
   (with-meta (fn [& args]
-               (when-not (= arity (count args))
-                 (throw (clojure.lang.ArityException.
-                         (count args)
-                         (str "restricted arity (" arity ") fn of " f))))
-               (apply f args))
+               (let [nargs (count args)]
+                 (if (or (Double/isNaN arity) (= arity nargs))
+                   (apply f args)
+                   (throw (clojure.lang.ArityException.
+                           (count args)
+                           (str "restricted arity (" arity ") fn of " f))))))
     {:arity arity}))
 
 (defn spread-combine [h f g]
   (let [n (get-arity f)
         m (get-arity g)
-        t (+ n m)]
+        t (+ n m)
+        nargs-for-f
+        (cond (and (Double/isNaN n) (Double/isNaN m)) #(quot % 2)
+              (Double/isNaN n) #(- % m)
+              :else (constantly n))]
     (letfn [(the-combination [& args]
-              (assert (= (count args) t))
-              (h (apply f (take n args))
-                 (apply g (drop n args))))]
+              (let [nargs (count args)
+                    n (nargs-for-f nargs)]
+                (assert (or (Double/isNaN t) (= nargs t)))
+                (h (apply f (take n args))
+                   (apply g (drop n args)))))]
       (restrict-arity the-combination t))))
 
 (defn compose [f g]
   (let [n (get-arity g)
         m (get-arity f)]
-    (when-not (= 1 m)
+    (when-not (or (= 1 m) (Double/isNaN m))
       (throw (clojure.lang.ArityException. m (str f))))
     (restrict-arity (fn [& args] (f (apply g args)))
                     n)))
 
 (defn parallel-combine [h f g]
   (let [n (get-arity f)
-        m (get-arity g)]
-    (assert (= n m))
-    (assert (= 2 (get-arity h)))
+        m (get-arity g)
+        o (get-arity h)]
+    (assert (or (= n m) (Double/isNaN n) (Double/isNaN m)))
+    (assert (or (= 2 o) (Double/isNaN o)))
     (restrict-arity (fn [& args]
                       (h (apply f args) (apply g args)))
-                    n)))
+                    (if (Double/isNaN n)
+                      m
+                      n))))
