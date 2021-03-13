@@ -51,5 +51,32 @@
                               (fn [u v w] (list 'bar u v w)))
           'a 'b 'c 'd 'e))))
 
+(deftest ex2.1-test
+  (testing 'sdff.ch2/compose
+    (testing "Checks arity of component fns"
+      (is (thrown? clojure.lang.ArityException
+                   (ch2/compose (fn [a b] (+ a b)) (fn [x] x))))
+      (is (thrown? clojure.lang.ArityException
+                   (ch2/compose (fn [a b c] a) (fn [x] x))))
+      (is (thrown? clojure.lang.ArityException
+                   ((ch2/compose - (fn [y] (* 5 y))) 1)))
+      (is (= -5 ((ch2/compose (fn [x] (- x)) (fn [y] (* 5 y))) 1))))
 
+    (testing "Combined fn checks number of args"
+      (is (thrown? clojure.lang.ArityException
+                   ((ch2/compose (fn [x] (- x)) (fn [u v] (* u v))) 2 3 4)))
+      (is (= -6 ((ch2/compose (fn [x] (- x)) (fn [u v] (* u v))) 2 3))))
 
+    (testing "Combined fn advertises correct arity"
+      (is (= 0 (ch2/get-arity
+                (ch2/compose (fn [x] (- x))
+                             (fn [] (rand))))))
+      (is (= 1 (ch2/get-arity
+                (ch2/compose (fn [x] (- x))
+                             (fn [u] (* u u))))))
+      (is (= 2 (ch2/get-arity
+                (ch2/compose (fn [x] (- x))
+                             (fn [u v] (* u v))))))
+      (is (= 3 (ch2/get-arity
+                (ch2/compose (fn [x] (- x))
+                             (fn [u v w] (* u v w)))))))))
