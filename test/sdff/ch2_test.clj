@@ -16,7 +16,7 @@
 
 (deftest parallel-combine-test
   (is (= '((foo a b c) (bar a b c))
-         ((ch2/parallel-combine list
+         ((ch2/parallel-combine (fn [x y] (list x y))
                                 (fn [x y z] (list 'foo x y z))
                                 (fn [u v w] (list 'bar u v w)))
           'a 'b 'c))))
@@ -79,4 +79,44 @@
                              (fn [u v] (* u v))))))
       (is (= 3 (ch2/get-arity
                 (ch2/compose (fn [x] (- x))
-                             (fn [u v w] (* u v w)))))))))
+                             (fn [u v w] (* u v w))))))))
+
+  (testing 'sdff.ch2/parallel-combine
+    (testing "Checks arity of component functions"
+      (is (thrown? java.lang.AssertionError
+                   (ch2/parallel-combine (fn [x y] (* x y))
+                                         (fn [a] (- a))
+                                         (fn [b c] (+ b c)))))
+      (is (thrown? java.lang.AssertionError
+                   (ch2/parallel-combine (fn [x y] (* x y))
+                                         (fn [b c] (+ b c))
+                                         (fn [a] (- a)))))
+      (is (thrown? java.lang.AssertionError
+                   (ch2/parallel-combine (fn [x y z] (* x y z))
+                                         (fn [a] (- a))
+                                         (fn [b] (+ b)))))
+      (is (= -16 ((ch2/parallel-combine (fn [x y] (* x y))
+                                        (fn [a] (- a))
+                                        (fn [b] (+ b))) 4))))
+
+    (testing "Combined fn checks number of args"
+      (is (thrown? clojure.lang.ArityException
+                   ((ch2/parallel-combine (fn [x y] (* x y))
+                                          (fn [a] (- a))
+                                          (fn [b] (+ b)))
+                    4 5 6)))
+      (is (= -36 ((ch2/parallel-combine (fn [x y] (* x y))
+                                        (fn [a b c] (- 0 a b c))
+                                        (fn [x y z] (+ x y z)))
+                  1 2 3))))
+
+    (testing "Combined fn advertises correct arity"
+      (is (= 1 (ch2/get-arity (ch2/parallel-combine (fn [x y] (* x y))
+                                                    (fn [a] (- a))
+                                                    (fn [b] (+ b))))))
+      (is (= 2 (ch2/get-arity (ch2/parallel-combine (fn [x y] (* x y))
+                                                    (fn [a b] (- 0 a b))
+                                                    (fn [x y] (+ x y))))))
+      (is (= 3 (ch2/get-arity (ch2/parallel-combine (fn [x y] (* x y))
+                                                    (fn [a b c] (- 0 a b c))
+                                                    (fn [x y z] (+ x y z)))))))))

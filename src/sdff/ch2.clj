@@ -49,3 +49,12 @@
       (throw (clojure.lang.ArityException. m (str f))))
     (restrict-arity (fn [& args] (f (apply g args)))
                     n)))
+
+(defn parallel-combine [h f g]
+  (let [n (get-arity f)
+        m (get-arity g)]
+    (assert (= n m))
+    (assert (= 2 (get-arity h)))
+    (restrict-arity (fn [& args]
+                      (h (apply f args) (apply g args)))
+                    n)))
