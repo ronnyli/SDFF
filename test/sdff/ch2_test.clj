@@ -111,12 +111,15 @@
                   1 2 3))))
 
     (testing "Combined fn advertises correct arity"
-      (is (= 1 (ch2/get-arity (ch2/parallel-combine (fn [x y] (* x y))
-                                                    (fn [a] (- a))
-                                                    (fn [b] (+ b))))))
-      (is (= 2 (ch2/get-arity (ch2/parallel-combine (fn [x y] (* x y))
-                                                    (fn [a b] (- 0 a b))
-                                                    (fn [x y] (+ x y))))))
-      (is (= 3 (ch2/get-arity (ch2/parallel-combine (fn [x y] (* x y))
-                                                    (fn [a b c] (- 0 a b c))
-                                                    (fn [x y z] (+ x y z)))))))))
+      (is (= 1 (ch2/get-arity
+                (ch2/parallel-combine (fn [x y] (* x y))
+                                      (fn [a] (- a))
+                                      (fn [b] (+ b))))))
+      (is (= 2 (ch2/get-arity
+                (ch2/parallel-combine (fn [x y] (* x y))
+                                      (fn [a b] (- 0 a b))
+                                      (fn [x y] (+ x y))))))
+      (is (= 3 (ch2/get-arity
+                (ch2/parallel-combine (fn [x y] (* x y))
+                                      (fn [a b c] (- 0 a b c))
+                                      (fn [x y z] (+ x y z)))))))))
