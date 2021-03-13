@@ -19,8 +19,9 @@
     the-combination))
 
 (defn get-arity [f]
-  (or (-> f meta :arity)
-      (-> f class .getDeclaredMethods first .getParameterTypes alength)))
+  (letfn [(fn-arity [f] (-> f .getParameterTypes alength))]
+    (or (-> f meta :arity)
+        (->> f class .getDeclaredMethods (map fn-arity) sort first))))
 
 (defn restrict-arity [f arity]
   (with-meta (fn [& args]
