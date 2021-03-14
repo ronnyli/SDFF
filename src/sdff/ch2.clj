@@ -122,16 +122,20 @@
 (defn insert-at [coll idx value]
   (concat (take idx coll) [value] (drop idx coll)))
 
-(defn curry-argument-index [i]
+(defn curry-argument-indices [& indices]
   (fn [& args]
-    (fn [x]
-      (apply values (insert-at args i x)))))
+    (fn [& xs]
+      (let [args (reduce (fn [accum [idx arg]]
+                           (insert-at accum idx arg))
+                         args
+                         (map vector indices xs))]
+        (apply values args)))))
 
-(defn curry-argument [i]
+(defn curry-argument [& indices]
   (fn [& args]
-    (let [curry-args (apply (curry-argument-index i) args)]
+    (let [curry-args (apply (apply curry-argument-indices indices) args)]
       (fn [f]
-        (assert (= (count args) (dec (get-arity f))))
+        (assert (= (count args) (- (get-arity f) (count indices))))
         (compose f curry-args)))))
 
 (defn make-permutation [permspec]

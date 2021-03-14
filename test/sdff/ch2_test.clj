@@ -281,18 +281,6 @@
   (is (= '(a b d)
          (((ch2/discard-argument 2)
            list)
-          'a 'b 'c 'd)))
-  (is (= '(b d)
-         (((ch2/discard-argument 0 2)
-           list)
-          'a 'b 'c 'd)))
-  (is (= '(b)
-         (((ch2/discard-argument 0 2 3)
-           list)
-          'a 'b 'c 'd)))
-  (is (= '()
-         (((ch2/discard-argument 0 1 2 3)
-           list)
           'a 'b 'c 'd))))
 
 (deftest curry-argument-test
@@ -312,4 +300,27 @@
            (fn [x y z w] (list 'foo x y z w)))
           'a 'b 'c 'd))))
 
+(deftest ex2.5-test
+  (testing 'sdff.ch2/discard-argument
+    (is (= '(b d)
+           (((ch2/discard-argument 0 2)
+             list)
+            'a 'b 'c 'd)))
+    (is (= '(b)
+           (((ch2/discard-argument 0 2 3)
+             list)
+            'a 'b 'c 'd)))
+    (is (= '()
+           (((ch2/discard-argument 0 1 2 3)
+             list)
+            'a 'b 'c 'd))))
 
+  (testing 'sdff.ch2/curry-argument
+    (is (= '(foo a b c d)
+           ((((ch2/curry-argument 2 3) 'a 'b)
+             (fn [x y z w] (list 'foo x y z w)))
+            'c 'd)))
+    (is (= '(foo c a d b)
+           ((((ch2/curry-argument 0 2) 'a 'b)
+             (fn [x y z w] (list 'foo x y z w)))
+            'c 'd)))))
