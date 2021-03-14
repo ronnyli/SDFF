@@ -3,9 +3,9 @@
  :aliases
  {:test
   {:extra-paths ["test"]
-   :extra-deps {lambdaisland/kaocha {:mvn/version "1.0.732"}}
+   :extra-deps {lambdaisland/kaocha {:mvn/version "1.0.829"}}
    :main-opts ["-m" "kaocha.runner"]}
   :test-dev
   {:extra-paths ["test"]
-   :extra-deps {lambdaisland/kaocha {:mvn/version "1.0.732"}}
+   :extra-deps {lambdaisland/kaocha {:mvn/version "1.0.829"}}
    :main-opts ["-m" "kaocha.runner" "--watch"]}}}
