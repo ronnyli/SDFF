@@ -52,20 +52,25 @@
         (values? b) (apply values (conj (seq b) a))
         :else (values a b)))
 
-(defn compose [f g]
-  (let [n (get-arity g)
-        m (get-arity f)]
-    (letfn [(composable-value? [result]
-              (or (Double/isNaN m) (= 1 m)
-                  (and (values? result) (= m (count result)))))
-            (composed-fn [& args]
-              (let [result (apply g args)]
-                (when-not (composable-value? result)
-                  (throw (clojure.lang.ArityException. m (str f))))
-                (if (values? result)
-                  (apply f result)
-                  (f result))))]
-      (restrict-arity composed-fn n))))
+(defn compose
+  ([f g]
+   (let [n (get-arity g)
+         m (get-arity f)]
+     (letfn [(composable-value? [result]
+               (or (Double/isNaN m) (= 1 m)
+                   (and (values? result) (= m (count result)))))
+             (composed-fn [& args]
+               (let [result (apply g args)]
+                 (when-not (composable-value? result)
+                   (throw (clojure.lang.ArityException. m (str f))))
+                 (if (values? result)
+                   (apply f result)
+                   (f result))))]
+       (restrict-arity composed-fn n))))
+  ([f g & hs]
+   (if (> (count hs) 1)
+     (recur (compose f g) (first hs) (rest hs))
+     (compose (compose f g) (first hs)))))
 
 (defn parallel-apply [f g]
   (let [n (get-arity f)

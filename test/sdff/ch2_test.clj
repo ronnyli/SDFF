@@ -323,4 +323,17 @@
     (is (= '(foo c a d b)
            ((((ch2/curry-argument 0 2) 'a 'b)
              (fn [x y z w] (list 'foo x y z w)))
-            'c 'd)))))
+            'c 'd))))
+
+  (testing 'sdff.ch2/compose
+    (is (= 256 ((ch2/compose square square square) 2)))
+
+    (is (= '(a b c d e f g)
+           ((ch2/compose #(conj % 'a)
+                         #(conj % 'b)
+                         #(conj % 'c)
+                         #(conj % 'd)
+                         #(conj % 'e)
+                         #(conj % 'f)
+                         #(conj % 'g))
+            '())))))
