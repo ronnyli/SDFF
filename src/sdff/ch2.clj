@@ -98,3 +98,55 @@
 
 (defn spread-combine [h f g]
   (compose h (spread-apply f g)))
+
+(defn remove-indices [coll indices]
+  (let [indices (set indices)]
+    (transduce (comp (map-indexed (fn [& args] args))
+                     (remove #(contains? indices (first %)))
+                     (map second))
+               conj
+               coll)))
+
+(defn discard-argument-indices [& indices]
+  (assert (every? nat-int? indices))
+  (fn [& args]
+    (apply values (remove-indices args indices))))
+
+(defn discard-argument [& indices]
+  (let [discard-args (apply discard-argument-indices indices)]
+    (fn [f]
+      (let [m (inc (get-arity f))]
+        (assert (or (Double/isNaN m) (every? #(< % m) indices)))
+        (compose f discard-args)))))
+
+(defn insert-at [coll idx value]
+  (concat (take idx coll) [value] (drop idx coll)))
+
+(defn curry-argument-index [i]
+  (fn [& args]
+    (fn [x]
+      (apply values (insert-at args i x)))))
+
+(defn curry-argument [i]
+  (fn [& args]
+    (let [curry-args (apply (curry-argument-index i) args)]
+      (fn [f]
+        (assert (= (count args) (dec (get-arity f))))
+        (compose f curry-args)))))
+
+(defn make-permutation [permspec]
+  (fn [coll]
+    (let [coll (vec coll)]
+      (map (fn [idx] (nth coll idx))
+           permspec))))
+
+(defn permute-argument-indices [& permspec]
+  (let [permute (make-permutation permspec)]
+    (fn [& args]
+      (apply values (permute args)))))
+
+(defn permute-arguments [& permspec]
+  (let [permute-args (apply permute-argument-indices permspec)]
+    (fn [f]
+      (assert (= (get-arity f) (count permspec)))
+      (compose f permute-args))))

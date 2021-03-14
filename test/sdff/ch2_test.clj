@@ -273,3 +273,43 @@
                                 (fn [a] (ch2/values a (- a))))
           2))))
 
+(deftest discard-argument-test
+  (is (= '(foo a b d)
+         (((ch2/discard-argument 2)
+           (fn [x y z] (list 'foo x y z)))
+          'a 'b 'c 'd)))
+  (is (= '(a b d)
+         (((ch2/discard-argument 2)
+           list)
+          'a 'b 'c 'd)))
+  (is (= '(b d)
+         (((ch2/discard-argument 0 2)
+           list)
+          'a 'b 'c 'd)))
+  (is (= '(b)
+         (((ch2/discard-argument 0 2 3)
+           list)
+          'a 'b 'c 'd)))
+  (is (= '()
+         (((ch2/discard-argument 0 1 2 3)
+           list)
+          'a 'b 'c 'd))))
+
+(deftest curry-argument-test
+  (is (= '(foo a b d c)
+         ((((ch2/curry-argument 2) 'a 'b 'c)
+           (fn [x y z w] (list 'foo x y z w)))
+          'd))))
+
+(deftest make-permutation-test
+  (is (= '(b a c e d)
+         ((ch2/make-permutation [1 0 2 4 3])
+          '[a b c d e]))))
+
+(deftest permute-arguments-test
+  (is (= '(foo b c a d)
+         (((ch2/permute-arguments 1 2 0 3)
+           (fn [x y z w] (list 'foo x y z w)))
+          'a 'b 'c 'd))))
+
+
