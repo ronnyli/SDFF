@@ -7,7 +7,9 @@
   (is (= '(foo (bar z))
          ((ch2/compose (fn [x] (list 'foo x))
                        (fn [x] (list 'bar x)))
-          'z))))
+          'z)))
+  (is (= 35 ((ch2/compose + (fn [x] (ch2/values (* x x) (+ x x))))
+             5))))
 
 (defn square [x] (* x x))
 
@@ -48,15 +50,28 @@
          ((ch2/spread-combine list
                               (fn [x y] (list 'foo x y))
                               (fn [u v w] (list 'bar u v w)))
+          'a 'b 'c 'd 'e)))
+  (is (= '(a b c d e)
+         ((ch2/spread-combine list
+                              (fn [x y] (ch2/values x y))
+                              (fn [u v w] (ch2/values u v w)))
           'a 'b 'c 'd 'e))))
 
 (deftest ex2.1-test
   (testing 'sdff.ch2/compose
     (testing "Checks arity of component fns"
       (is (thrown? clojure.lang.ArityException
-                   (ch2/compose (fn [a b] (+ a b)) (fn [x] x))))
+                   ((ch2/compose (fn [a b] (+ a b)) (fn [x] x)) 5)))
+      (is (= 0
+             ((ch2/compose (fn [a b] (+ a b))
+                           (fn [x] (ch2/values x (- x))))
+              5)))
       (is (thrown? clojure.lang.ArityException
-                   (ch2/compose (fn [a b c] a) (fn [x] x))))
+                   ((ch2/compose (fn [a b c] a) (fn [x] x)) 5)))
+      (is (= '(5 * -5 = -25)
+             ((ch2/compose (fn [a b c] (list a '* b '= (- c)))
+                           (fn [x] (ch2/values x (- x) (* x x))))
+              5)))
       (is (= -5 ((ch2/compose (fn [x] (- x)) (fn [y] (* 5 y))) 1))))
 
     (testing "Combined fn checks number of args"
@@ -88,10 +103,11 @@
                    (ch2/parallel-combine (fn [x y] (* x y))
                                          (fn [b c] (+ b c))
                                          (fn [a] (- a)))))
-      (is (thrown? java.lang.AssertionError
-                   (ch2/parallel-combine (fn [x y z] (* x y z))
-                                         (fn [a] (- a))
-                                         (fn [b] (+ b)))))
+      (is (thrown? clojure.lang.ArityException
+                   ((ch2/parallel-combine (fn [x y z] (* x y z))
+                                          (fn [a] (- a))
+                                          (fn [b] (+ b)))
+                    5)))
       (is (= -16 ((ch2/parallel-combine (fn [x y] (* x y))
                                         (fn [a] (- a))
                                         (fn [b] (+ b))) 4))))
@@ -239,3 +255,21 @@
             2 3)))
     (is (Double/isNaN (ch2/get-arity (ch2/parallel-combine / * +))))
     (is (= 24/9 ((ch2/parallel-combine / * +) 2 3 4)))))
+
+(deftest ex2.3-test
+  (is (= -16
+         ((ch2/parallel-combine (fn [x y z] (* x y z))
+                                (fn [a] (ch2/values a (- a)))
+                                (fn [b] (* b b)))
+          2)))
+  (is (= -16
+         ((ch2/parallel-combine (fn [x y z] (* x y z))
+                                (fn [b] (* b b))
+                                (fn [a] (ch2/values a (- a))))
+          2)))
+  (is (= -16
+         ((ch2/parallel-combine *
+                                (fn [a] (ch2/values (* 2 a) (/ a 2)))
+                                (fn [a] (ch2/values a (- a))))
+          2))))
+
