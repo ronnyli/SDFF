@@ -337,3 +337,26 @@
                          #(conj % 'f)
                          #(conj % 'g))
             '())))))
+
+(deftest r:alt-test
+  (is (= "\\(\\(foo\\)\\|\\(bar\\)\\|\\(baz\\)\\)"
+         (ch2/r:alt (ch2/r:quote "foo")
+                    (ch2/r:quote "bar")
+                    (ch2/r:quote "baz")))))
+
+(deftest ex2.6-test
+  (testing 'sdff.ch2/r:*
+    (is (= "\\(\\(abc\\)*\\)" (ch2/r:* (ch2/r:quote "abc"))))
+
+    (is (= "\\(\\(\\(asdf\\)\\(\\([123]\\|[abc]\\)*\\)\\)*\\)"
+           (ch2/r:* (ch2/r:seq (ch2/r:quote "asdf")
+                               (ch2/r:* (ch2/r:alt (ch2/r:char-from "123")
+                                                   (ch2/r:char-from "abc"))))))))
+
+  (testing 'sdff.ch2/r:+
+    (is (= "\\(\\(abc\\)\\(abc\\)*\\)" (ch2/r:+ (ch2/r:quote "abc"))))
+
+    (is (= "\\(\\(\\(asdf\\)\\(\\([123]\\|[abc]\\)\\([123]\\|[abc]\\)*\\)\\)\\(\\(asdf\\)\\(\\([123]\\|[abc]\\)\\([123]\\|[abc]\\)*\\)\\)*\\)"
+           (ch2/r:+ (ch2/r:seq (ch2/r:quote "asdf")
+                               (ch2/r:+ (ch2/r:alt (ch2/r:char-from "123")
+                                                   (ch2/r:char-from "abc")))))))))

@@ -1,5 +1,8 @@
 (ns sdff.ch2
-  (:refer-clojure :exclude [iterate identity]))
+  (:refer-clojure :exclude [iterate identity])
+  (:require
+   [clojure.string :as str]
+   [clojure.java.shell :as shell]))
 
 (declare compose)
 
@@ -74,13 +77,12 @@
 
 (defn parallel-apply [f g]
   (let [n (get-arity f)
-        m (get-arity g)]
+        m (get-arity g)
+        resulting-arity (if (Double/isNaN n) m n)]
     (assert (or (= n m) (Double/isNaN n) (Double/isNaN m)))
     (restrict-arity (fn [& args]
                       (append-values (apply f args) (apply g args)))
-                    (if (Double/isNaN n)
-                      m
-                      n))))
+                    resulting-arity)))
 
 (defn parallel-combine [h f g]
   (compose h (parallel-apply f g)))
@@ -159,3 +161,99 @@
     (fn [f]
       (assert (= (get-arity f) (count permspec)))
       (compose f permute-args))))
+
+(def r:dot ".")
+(def r:bol "^")
+(def r:eol "$")
+
+(defn r:seq [& exprs]
+  (str "\\(" (apply str exprs) "\\)"))
+
+(def chars-needing-quoting #{\. \[ \\ \^ \$ \*})
+
+(defn r:quote [string]
+  (r:seq
+   (apply str
+    (mapcat (fn [char]
+              (if (contains? chars-needing-quoting char)
+                (list \\ char)
+                (list char)))
+            (seq string)))))
+
+(defn r:alt [& exprs]
+  (if (seq exprs)
+    (apply r:seq
+           (conj (mapcat (fn [expr] ["\\|" expr])
+                         (rest exprs))
+                 (first exprs)))
+    (r:seq)))
+
+(defn r:repeat [min max expr]
+  (apply r:seq
+         (concat (repeat min expr)
+                 (case max
+                   false (list expr "*")
+                   min ()
+                   (repeat (- max min) (r:alt expr ""))))))
+
+(defn bracket [string procedure]
+  (apply str
+         (concat '(\[)
+                 (procedure (seq string))
+                 '(\]))))
+
+(def chars-needing-quoting-in-brackets #{\] \^ \-})
+
+(defn quote-bracketed-contents [members]
+  (let [members (into #{} members)]
+    (letfn [(optional [char]
+              (if (contains? members char)
+                (list char)
+                ()))]
+      (concat (optional \])
+              (remove chars-needing-quoting-in-brackets members)
+              (optional \^)
+              (optional \-)))))
+
+(defn r:char-not-from [string]
+  (bracket string
+           (fn [members]
+             (conj (quote-bracketed-contents members) \^))))
+
+(defn r:char-from [string]
+  (case (count string)
+    0 (r:seq)
+    1 (r:quote string)
+    (bracket string
+             (fn [members]
+               (if (= #{\- \^} members)
+                 #{\- \^}
+                 (quote-bracketed-contents members))))))
+
+(defn bourne-shell-quote-string [string]
+  (apply str
+         (mapcat (fn [char]
+                   (if (= char \')
+                     (list \' \\ char \')
+                     (list char)))
+                 string)))
+
+(defn bourne-shell-grep-command-string [expr filename]
+  (str "grep --basic-regexp"
+       " --regexp=" (bourne-shell-quote-string expr)
+       " "
+       filename))
+
+(defn write-bourne-shell-grep-command [expr filename]
+  (println (bourne-shell-grep-command-string expr filename)))
+
+(defn grep [expr filename]
+  (-> (apply shell/sh
+             (str/split (bourne-shell-grep-command-string expr filename)
+                        #" "))
+      :out
+      (str/split #"\n")))
+
+(def r:* (((curry-argument 2) 0 false) r:repeat))
+
+(def r:+ (((curry-argument 2) 1 false) r:repeat))
