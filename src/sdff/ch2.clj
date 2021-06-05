@@ -2,7 +2,9 @@
   (:refer-clojure :exclude [iterate identity])
   (:require
    [clojure.string :as str]
-   [clojure.java.shell :as shell]))
+   [clojure.java.shell :as shell])
+  (:import
+   (java.io File)))
 
 (declare compose)
 
@@ -189,12 +191,14 @@
     (r:seq)))
 
 (defn r:repeat [min max expr]
-  (apply r:seq
-         (concat (repeat min expr)
-                 (case max
-                   false (list expr "*")
-                   min ()
-                   (repeat (- max min) (r:alt expr ""))))))
+  (let [open "\\{"
+        close "\\}"]
+    (apply r:seq
+           (concat expr
+                   (case max
+                     false (list open min "," close)
+                     min ()
+                     (list open min "," max close))))))
 
 (defn bracket [string procedure]
   (apply str
@@ -248,12 +252,14 @@
   (println (bourne-shell-grep-command-string expr filename)))
 
 (defn grep [expr filename]
-  (-> (apply shell/sh
-             (str/split (bourne-shell-grep-command-string expr filename)
-                        #" "))
-      :out
-      (str/split #"\n")))
+  (let [filename (.getAbsolutePath (File. filename))]
+    (-> (apply shell/sh
+               (str/split (bourne-shell-grep-command-string expr filename)
+                          #"\s+"))
+        :out
+        (str/split #"\n"))))
 
 (def r:* (((curry-argument 2) 0 false) r:repeat))
 
 (def r:+ (((curry-argument 2) 1 false) r:repeat))
+

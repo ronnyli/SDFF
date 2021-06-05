@@ -346,17 +346,50 @@
 
 (deftest ex2.6-test
   (testing 'sdff.ch2/r:*
-    (is (= "\\(\\(abc\\)*\\)" (ch2/r:* (ch2/r:quote "abc"))))
+    (is (= "\\(\\(abc\\)\\{0,\\}\\)" (ch2/r:* (ch2/r:quote "abc"))))
 
-    (is (= "\\(\\(\\(asdf\\)\\(\\([123]\\|[abc]\\)*\\)\\)*\\)"
+    (is (= "\\(\\(\\(asdf\\)\\(\\([123]\\|[abc]\\)\\{0,\\}\\)\\)\\{0,\\}\\)"
            (ch2/r:* (ch2/r:seq (ch2/r:quote "asdf")
                                (ch2/r:* (ch2/r:alt (ch2/r:char-from "123")
                                                    (ch2/r:char-from "abc"))))))))
 
   (testing 'sdff.ch2/r:+
-    (is (= "\\(\\(abc\\)\\(abc\\)*\\)" (ch2/r:+ (ch2/r:quote "abc"))))
+    (is (= "\\(\\(abc\\)\\{1,\\}\\)" (ch2/r:+ (ch2/r:quote "abc"))))
 
-    (is (= "\\(\\(\\(asdf\\)\\(\\([123]\\|[abc]\\)\\([123]\\|[abc]\\)*\\)\\)\\(\\(asdf\\)\\(\\([123]\\|[abc]\\)\\([123]\\|[abc]\\)*\\)\\)*\\)"
+    (is (= "\\(\\(\\(asdf\\)\\(\\([123]\\|[abc]\\)\\{1,\\}\\)\\)\\{1,\\}\\)"
            (ch2/r:+ (ch2/r:seq (ch2/r:quote "asdf")
                                (ch2/r:+ (ch2/r:alt (ch2/r:char-from "123")
                                                    (ch2/r:char-from "abc")))))))))
+
+(deftest ex2.7
+  ;; a. causes stack overflow.
+  ;; b. Eva's proposal generates shorter expression strings, using an
+  ;;    easily parsed & understood concept, and would require fewer
+  ;;    changes to r:repeat than Alyssa's.
+  ;; c. Ben's proposal implements r:repeat in terms of a syntactic
+  ;;    primitive, the interval expression, simplifying the
+  ;;    implementation work.
+  (testing 'sdff.ch2/r:repeat
+    (is (= ["why"]
+           (ch2/grep (ch2/r:seq "w" (ch2/r:repeat 1 1 "h") "y")
+                     "resources/regex_intervals.txt")))
+
+    (is (= ["whhy"]
+           (ch2/grep (ch2/r:seq "w" (ch2/r:repeat 2 2 "h") "y")
+                     "resources/regex_intervals.txt")))
+
+    (is (= ["whhhy"]
+           (ch2/grep (ch2/r:seq "w" (ch2/r:repeat 3 3 "h") "y")
+                     "resources/regex_intervals.txt")))
+
+    (is (= ["why" "whhy"]
+           (ch2/grep (ch2/r:seq "w" (ch2/r:repeat 1 2 "h") "y")
+                     "resources/regex_intervals.txt")))
+
+    (is (= ["whhy" "whhhy"]
+           (ch2/grep (ch2/r:seq "w" (ch2/r:repeat 2 3 "h") "y")
+                     "resources/regex_intervals.txt")))
+
+    (is (= ["why" "whhy" "whhhy"]
+           (ch2/grep (ch2/r:seq "w" (ch2/r:repeat 1 3 "h") "y")
+                     "resources/regex_intervals.txt")))))
